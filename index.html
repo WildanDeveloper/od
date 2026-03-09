@@ -591,9 +591,12 @@ footer p {
             <div class="cam-card-title">Camera Feed</div>
             <div class="cam-card-sub">Real-time QR detection</div>
           </div>
-          <div class="cam-status-pill">
-            <div class="cam-status-dot" id="camDot"></div>
-            <span id="camPillText">OFFLINE</span>
+          <div style="display:flex;align-items:center;gap:10px;">
+            <button id="btnFlip" onclick="flipCamera()" style="display:none;background:rgba(0,240,255,0.08);border:1px solid rgba(0,240,255,0.2);color:var(--primary);padding:5px 12px;border-radius:6px;cursor:pointer;font-family:'Share Tech Mono',monospace;font-size:.62rem;letter-spacing:1.5px;">FLIP CAM</button>
+            <div class="cam-status-pill">
+              <div class="cam-status-dot" id="camDot"></div>
+              <span id="camPillText">OFFLINE</span>
+            </div>
           </div>
         </div>
 
@@ -700,6 +703,7 @@ footer p {
 <script>
 let scanning=false, lastScanned='', lastScannedTime=0;
 let attendanceMap={}, totalScans=0, dupCount=0, videoStream=null;
+let facingMode='environment';
 
 document.getElementById('dateDisplay').textContent =
   new Date().toLocaleDateString('id-ID',{weekday:'short',day:'numeric',month:'short',year:'numeric'}).toUpperCase();
@@ -715,7 +719,7 @@ async function startCamera(){
   try{
     btn.disabled=true; btn.textContent='INITIALIZING...';
     videoStream=await navigator.mediaDevices.getUserMedia({
-      video:{facingMode:'environment',width:{ideal:640},height:{ideal:640}}
+      video:{facingMode:facingMode,width:{ideal:640},height:{ideal:640}}
     });
     const video=document.getElementById('video');
     video.srcObject=videoStream;
@@ -723,8 +727,9 @@ async function startCamera(){
     await video.play();
     scanning=true;
     btn.textContent='STOP KAMERA'; btn.onclick=stopCamera; btn.disabled=false;
-    setCamPill('on','ONLINE');
-    setStatus('active','Scanning aktif...','// arahkan qr code siswa ke kamera');
+    document.getElementById('btnFlip').style.display='inline-block';
+    setCamPill('on', facingMode==='user' ? 'FRONT' : 'REAR');
+    setStatus('active','Scanning aktif...','// '+( facingMode==='user' ? 'kamera depan' : 'kamera belakang' )+' aktif');
     requestAnimationFrame(tick);
   }catch(e){
     btn.disabled=false; btn.textContent='Mulai Scan Kamera';
@@ -734,11 +739,22 @@ async function startCamera(){
   }
 }
 
+async function flipCamera(){
+  facingMode = facingMode==='environment' ? 'user' : 'environment';
+  if(videoStream){
+    scanning=false;
+    videoStream.getTracks().forEach(t=>t.stop());
+    videoStream=null;
+  }
+  await startCamera();
+}
+
 function stopCamera(){
   scanning=false;
   if(videoStream){videoStream.getTracks().forEach(t=>t.stop());videoStream=null;}
   document.getElementById('video').srcObject=null;
   document.getElementById('noCam').style.display='flex';
+  document.getElementById('btnFlip').style.display='none';
   const btn=document.getElementById('btnStart');
   btn.textContent='Mulai Scan Kamera'; btn.onclick=startCamera;
   setCamPill('','OFFLINE');
@@ -857,3 +873,4 @@ function clearLog(){
 </script>
 </body>
 </html>
+
