@@ -901,7 +901,7 @@ async function startCamera(){
   try{
     btn.disabled=true; btn.textContent='INITIALIZING...';
     videoStream=await navigator.mediaDevices.getUserMedia({
-      video:{facingMode:facingMode,width:{ideal:640},height:{ideal:640}}
+      video:{facingMode:facingMode,width:{ideal:1280},height:{ideal:1280}}
     });
     const video=document.getElementById('video');
     video.srcObject=videoStream;
@@ -978,17 +978,14 @@ function tick(){
     canvas.width=video.videoWidth; canvas.height=video.videoHeight;
     const ctx=canvas.getContext('2d');
 
-    // Boost contrast untuk bantu scanning
-    ctx.filter='contrast(1.4) brightness(1.1)';
     ctx.drawImage(video,0,0,canvas.width,canvas.height);
-    ctx.filter='none';
 
     const id=ctx.getImageData(0,0,canvas.width,canvas.height);
 
     // Coba semua inversion mode
     let code = jsQR(id.data,id.width,id.height,{inversionAttempts:'attemptBoth'});
 
-    if(code){
+    if(code && code.data){
       const t=Date.now();
       if(code.data!==lastScanned||t-lastScannedTime>3000){
         lastScanned=code.data; lastScannedTime=t; handleScan(code.data);
@@ -1126,7 +1123,7 @@ function generateAllQR(){
 
     const qrObj = new QRCode(document.getElementById('qrdiv-'+idx),{
       text: qrData,
-      width: 140, height: 140,
+      width: 256, height: 256,
       colorDark:'#000000', colorLight:'#ffffff',
       correctLevel: QRCode.CorrectLevel.M
     });
@@ -1142,9 +1139,9 @@ function generateAllQR(){
       } else {
         // img with data: src — draw to offscreen canvas
         const c=document.createElement('canvas');
-        c.width=140; c.height=140;
+        c.width=256; c.height=256;
         const ctx=c.getContext('2d');
-        ctx.drawImage(el,0,0,140,140);
+        ctx.drawImage(el,0,0,256,256);
         dataURL=c.toDataURL('image/png');
       }
       const btn=document.getElementById('dlbtn-'+idx);
