@@ -978,10 +978,7 @@ function tick(){
     canvas.width=video.videoWidth; canvas.height=video.videoHeight;
     const ctx=canvas.getContext('2d');
 
-    // Boost contrast untuk bantu scanning
-    ctx.filter='contrast(1.4) brightness(1.1)';
     ctx.drawImage(video,0,0,canvas.width,canvas.height);
-    ctx.filter='none';
 
     const id=ctx.getImageData(0,0,canvas.width,canvas.height);
 
