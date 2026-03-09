@@ -949,15 +949,51 @@ function stopCamera(){
   setStatus('idle','Kamera dimatikan','// tekan mulai scan untuk memulai lagi');
 }
 
+// ─── Audio beep ───
+const audioCtx = typeof AudioContext !== 'undefined' ? new AudioContext() : (typeof webkitAudioContext !== 'undefined' ? new webkitAudioContext() : null);
+
+function beep(type){
+  if(!audioCtx) return;
+  const osc = audioCtx.createOscillator();
+  const gain = audioCtx.createGain();
+  osc.connect(gain);
+  gain.connect(audioCtx.destination);
+  if(type === 'success'){
+    osc.frequency.setValueAtTime(880, audioCtx.currentTime);
+    osc.frequency.setValueAtTime(1100, audioCtx.currentTime + 0.1);
+    gain.gain.setValueAtTime(0.3, audioCtx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.3);
+    osc.start(audioCtx.currentTime);
+    osc.stop(audioCtx.currentTime + 0.3);
+  } else {
+    osc.frequency.setValueAtTime(300, audioCtx.currentTime);
+    gain.gain.setValueAtTime(0.3, audioCtx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.25);
+    osc.start(audioCtx.currentTime);
+    osc.stop(audioCtx.currentTime + 0.25);
+  }
+}
+
+// Resume audio context on first interaction
+document.addEventListener('click', ()=>{ if(audioCtx && audioCtx.state==='suspended') audioCtx.resume(); }, {once:true});
+
 function tick(){
   if(!scanning)return;
   const video=document.getElementById('video'),canvas=document.getElementById('canvas');
   if(video.readyState===video.HAVE_ENOUGH_DATA){
     canvas.width=video.videoWidth; canvas.height=video.videoHeight;
     const ctx=canvas.getContext('2d');
+
+    // Boost contrast untuk bantu scanning
+    ctx.filter='contrast(1.4) brightness(1.1)';
     ctx.drawImage(video,0,0,canvas.width,canvas.height);
+    ctx.filter='none';
+
     const id=ctx.getImageData(0,0,canvas.width,canvas.height);
-    const code=jsQR(id.data,id.width,id.height,{inversionAttempts:'dontInvert'});
+
+    // Coba semua inversion mode
+    let code = jsQR(id.data,id.width,id.height,{inversionAttempts:'attemptBoth'});
+
     if(code){
       const t=Date.now();
       if(code.data!==lastScanned||t-lastScannedTime>3000){
@@ -978,7 +1014,7 @@ function handleFileUpload(event){
       c.width=img.width; c.height=img.height;
       const ctx=c.getContext('2d'); ctx.drawImage(img,0,0);
       const id=ctx.getImageData(0,0,c.width,c.height);
-      const code=jsQR(id.data,id.width,id.height,{inversionAttempts:'dontInvert'});
+      const code=jsQR(id.data,id.width,id.height,{inversionAttempts:'attemptBoth'});
       if(code){ handleScan(code.data); }
       else{
         setStatus('error','QR tidak terdeteksi','// pastikan foto jelas dan tidak buram');
@@ -997,11 +1033,13 @@ function handleScan(raw){
   const key=nama.toLowerCase(), isDup=!!attendanceMap[key];
   if(isDup){
     dupCount++; flash();
+    beep('error');
     setStatus('error',nama+' sudah tercatat hadir','// kelas: '+kelas+' — duplikat scan');
     addLogItem(nama,kelas,true);
   }else{
     attendanceMap[key]={nama,kelas};
     flash();
+    beep('success');
     setStatus('success',nama+' berhasil absen','// kelas: '+kelas);
     addLogItem(nama,kelas,false);
   }
